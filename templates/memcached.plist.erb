@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string><%= @service_name %></string>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/opt/memcached/bin/memcached</string>
+<% if @verbosity -%>
+    <string>-<%= @verbosity %></string>
+<% end -%>
+<% Puppet::Parser::Functions.function('memcached_max_memory') -%>
+    <string>-m <%= scope.function_memcached_max_memory([@max_memory]) %></string>
+<% if @lock_memory -%>
+    <string>-k</string>
+<% end -%>
+<% if @use_sasl -%>
+    <string>-S</string>
+<% end -%>
+<% if @unix_socket -%>
+    <string>-s</string>
+    <string><%= @unix_socket %></string>
+<% else -%>
+    <string>-l</string>
+    <string><%= @listen_ip %></string>
+    <string>-p</string>
+    <string><%= @tcp_port %></string>
+    <string>-U</string>
+    <string><%= @udp_port %></string>
+<% end -%>
+    <string>-c</string>
+    <string><%= @max_connections %></string>
+    <string>-t</string>
+    <string><%= @processorcount %></string>
+
+<% if @item_size -%>
+    <string>-I</string>
+    <string><%= @item_size %></string>
+<% end -%>
+<% if @auto_removal -%>
+    <string>-M</string>
+<% end -%>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>WorkingDirectory</key>
+  <string>/usr/local</string>
+<% if @user -%>
+  <key>UserName</key>
+  <string><%= @user %></string>
+<% end -%>
+</dict>
+</plist>

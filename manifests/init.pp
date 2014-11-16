@@ -3,87 +3,37 @@
 # Manage memcached
 #
 class memcached (
-  $package_ensure  = 'present',
-  $logfile         = '/var/log/memcached.log',
-  $manage_firewall = false,
-  $max_memory      = false,
-  $item_size       = false,
-  $lock_memory     = false,
-  $listen_ip       = '0.0.0.0',
-  $tcp_port        = 11211,
-  $udp_port        = 11211,
+  $package_ensure  = $::memcached::params::package_ensure,
+  $logfile         = $::memcached::params::logfile,
+  $manage_firewall = $::memcached::params::manage_firewall,
+  $max_memory      = $::memcached::params::max_memory,
+  $item_size       = $::memcached::params::item_size,
+  $lock_memory     = $::memcached::params::lock_memory,
+  $listen_ip       = $::memcached::params::listen_ip,
+  $tcp_port        = $::memcached::params::tcp_port,
+  $udp_port        = $::memcached::params::udp_port,
   $user            = $::memcached::params::user,
-  $max_connections = '8192',
-  $verbosity       = undef,
-  $unix_socket     = undef,
-  $install_dev     = false,
-  $processorcount  = $::processorcount,
-  $service_restart = true,
-  $auto_removal    = false,
-  $use_sasl        = false
+  $max_connections = $::memcached::params::max_connections,
+  $verbosity       = $::memcached::params::verbosity,
+  $unix_socket     = $::memcached::params::unix_socket,
+  $install_dev     = $::memcached::params::install_dev,
+  $processorcount  = $::memcached::params::processorcount,
+  $service_restart = $::memcached::params::service_restart,
+  $auto_removal    = $::memcached::params::auto_removal,
+  $use_sasl        = $::memcached::params::use_sasl,
 ) inherits memcached::params {
 
-  # validate type and convert string to boolean if necessary
-  if is_string($manage_firewall) {
-    $manage_firewall_bool = str2bool($manage_firewall)
-  } else {
-    $manage_firewall_bool = $manage_firewall
-  }
-  validate_bool($manage_firewall_bool)
   validate_bool($service_restart)
 
-  if $package_ensure == 'absent' {
-    $service_ensure = 'stopped'
-    $service_enable = false
-  } else {
-    $service_ensure = 'running'
-    $service_enable = true
-  }
-
-  package { $memcached::params::package_name:
-    ensure => $package_ensure,
-  }
-
-  if $install_dev {
-    package { $memcached::params::dev_package_name:
-      ensure  => $package_ensure,
-      require => Package[$memcached::params::package_name]
-    }
-  }
-
-  if $manage_firewall_bool == true {
-    firewall { "100_tcp_${tcp_port}_for_memcached":
-      port   => $tcp_port,
-      proto  => 'tcp',
-      action => 'accept',
-    }
-
-    firewall { "100_udp_${udp_port}_for_memcached":
-      port   => $udp_port,
-      proto  => 'udp',
-      action => 'accept',
-    }
-  }
+  class { '::memcached::install': }->
+  class { '::memcached::config': }->
+  class { '::memcached::firewall': }->
+  class { '::memcached::service': }->
+  Class['memcached']
 
   if $service_restart {
-    $service_notify_real = Service[$memcached::params::service_name]
-  } else {
-    $service_notify_real = undef
+    Class['::memcached::install'] ~> Class['::memcached::service']
+    Class['::memcached::config'] ~> Class['::memcached::service']
   }
 
-  file { $memcached::params::config_file:
-    owner   => 'root',
-    group   => 'root',
-    mode    => '0644',
-    content => template($memcached::params::config_tmpl),
-    require => Package[$memcached::params::package_name],
-    notify  => $service_notify_real,
-  }
-
-  service { $memcached::params::service_name:
-    ensure     => $service_ensure,
-    enable     => $service_enable,
-    hasrestart => true,
-    hasstatus  => $memcached::params::service_hasstatus,
-  }
 }
